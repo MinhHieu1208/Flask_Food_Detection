@@ -1,0 +1,6 @@
+Flask==2.3.2
+keras==2.11.0
+numpy==1.23.5
+opencv-python==4.6.0.66
+Pillow==9.0.1
+wikipedia==1.4.0

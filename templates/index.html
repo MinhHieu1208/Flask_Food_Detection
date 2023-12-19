@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Food</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="container-fluid p-5 bg-primary text-white text-center">
+        <h1>VIETNAMESE FOOD IDENTIFICATION</h1>
+        <p>Provide identification information, the name of the dish, description of the dish, and the method of preparing the dish</p>
+    </div>
+    <div class="container">
+        <div class="text-center mt-5 mb-5">
+            <img id="output" style=" width: 250px; height: 250px;">
+        </div>
+        <form class="mb-5">
+            <div class="mb-3">
+                <label for="formFile" class="form-label">Select an image of the dish for prediction.</label>
+                <input class="form-control" type="file" id="formFile" onchange="loadFile(event)" required>
+            </div>
+            <div class="text-center row mt-5">
+                <button class="btn btn-primary" type="button">
+                    <div class="detect">
+                        Prediction
+                    </div>
+                    <div class="detecting">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Currently predicting...
+                    </div>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="modal" id="successModal">
+        <div class="modal-dialog" style="max-width: none; width: 900px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Food Information</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <img class="img_food" src="" alt="" width="150px" height="150px">
+                    </div>
+                    <div style="text-align: justify">
+                        <p class="tenmonan"></p>
+                        <p class="dochinhxac"> </p>
+                        <p class="mota"></p>
+                    </div>
+                    <div class="modal-header">
+                        <h5 class="modal-title">How To Cook</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p class="Ingredients"><b>Ingredients</b> </p>
+                        <div class="ingredients"></div>
+                        <p class="Steps"><b>Steps</b> </p>
+                        <div class="steps"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+<script>
+    var loadFile = function (event) {
+        var output = document.getElementById('output');
+        output.src = URL.createObjectURL(event.target.files[0]);
+        output.onload = function () {
+            URL.revokeObjectURL(output.src) // free memory
+        }
+    };
+
+    $(document).ready(function () {
+        $(".detecting").attr("style", "display: none;")
+        $(".detect").click(function () {
+            $(".detect").attr("style", "display: none;")
+            $(".detecting").attr("style", "display: block;")
+
+            var fileInput = $('#formFile')[0].files[0];
+            if (fileInput) {
+                var fileExtension = fileInput.name.split('.').pop().toLowerCase(); // Lấy phần mở rộng của tệp
+                var allowedExtensions = ['jpg', 'jpeg', 'png', 'gif']; // Các định dạng tệp cho phép
+
+                if (allowedExtensions.indexOf(fileExtension) === -1) {
+                    $(".detecting").attr("style", "display: none;")
+                    $(".detect").attr("style", "display: block;")
+                    alert('Định dạng file không hợp lệ. Chỉ cho phép những file có định dạng: ' + allowedExtensions.join(', '));
+                    return;
+                }
+
+                var formData = new FormData();
+
+                formData.append('image', fileInput);
+                var url = window.location.href;
+                $.ajax({
+                    url: url, // Đường dẫn đến tệp xử lý việc tải lên
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        // Xử lý phản hồi từ máy chủ
+                        $(".detecting").attr("style", "display: none;")
+                        $(".detect").attr("style", "display: block;")
+                        $(".tenmonan").empty();
+                        $(".dochinhxac").empty();
+                        $(".mota").empty();
+                        $(".ingredients").empty();
+                        $(".steps").empty();
+                        $('#successModal').modal('show');
+                        $(".tenmonan").append("<b>Food: </b>" + response.food_name)
+                        $(".dochinhxac").append("<b>Confidence: </b>" + response.confidence)
+                        $(".mota").append("<b>Description: </b>" + response.description)
+                        $(".img_food").attr("src", response.image_path)
+
+                        for(var i = 0; i < response.cook.Ingredients.length; i++){
+                            $(".ingredients").append('<p>- '+response.cook.Ingredients[i]+'</p>')
+                        }
+
+                        for(var i = 0; i < response.cook.Steps.length; i++){
+                            $(".steps").append('<p>Step '+ parseInt(i + 1) +': '+response.cook.Steps[i]+'</p>')
+                        }
+
+                        console.log(response);
+                    },
+                    error: function (jqXHR, textStatus, errorMessage) {
+                        $(".detecting").attr("style", "display: none;")
+                        $(".detect").attr("style", "display: block;")
+                        alert("Có Lỗi Khi Thực Hiện Dự Đoán Món Ăn, Vui Lòng Kiểm Tra Lại!")
+                        console.log(errorMessage);
+                    }
+                });
+            } else {
+                alert("Vui Lòng Chọn Một Ảnh!")
+                $(".detecting").attr("style", "display: none;")
+                $(".detect").attr("style", "display: block;")
+                return
+            }
+        })
+    });
+</script>
+
+</html>
